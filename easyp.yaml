@@ -1,0 +1,58 @@
+version: v1alpha
+lint:
+  use:
+    # Minimal
+    - DIRECTORY_SAME_PACKAGE
+    - PACKAGE_DEFINED
+    - PACKAGE_DIRECTORY_MATCH
+    - PACKAGE_SAME_DIRECTORY
+
+    # Basic
+    - ENUM_FIRST_VALUE_ZERO
+    - ENUM_NO_ALLOW_ALIAS
+    - ENUM_PASCAL_CASE
+    - ENUM_VALUE_UPPER_SNAKE_CASE
+    - FIELD_LOWER_SNAKE_CASE
+    - IMPORT_NO_PUBLIC
+    - IMPORT_NO_WEAK
+    - IMPORT_USED
+    - MESSAGE_PASCAL_CASE
+    - ONEOF_LOWER_SNAKE_CASE
+    - PACKAGE_LOWER_SNAKE_CASE
+    - PACKAGE_SAME_CSHARP_NAMESPACE
+    - PACKAGE_SAME_GO_PACKAGE
+    - PACKAGE_SAME_JAVA_MULTIPLE_FILES
+    - PACKAGE_SAME_JAVA_PACKAGE
+    - PACKAGE_SAME_PHP_NAMESPACE
+    - PACKAGE_SAME_RUBY_PACKAGE
+    - PACKAGE_SAME_SWIFT_PREFIX
+    - RPC_PASCAL_CASE
+    - SERVICE_PASCAL_CASE
+
+    # Default
+    - ENUM_VALUE_PREFIX
+    - ENUM_ZERO_VALUE_SUFFIX
+    - FILE_LOWER_SNAKE_CASE
+    - PACKAGE_VERSION_SUFFIX
+    - SERVICE_SUFFIX
+
+    # Unary RPC
+    - RPC_NO_CLIENT_STREAMING
+    - RPC_NO_SERVER_STREAMING
+  enum_zero_value_suffix: NONE
+deps:
+  - github.com/googleapis/googleapis
+
+generate:
+  inputs:
+    - directory: "api"
+  plugins:
+    - name: go
+      out: ./pkg
+      opts:
+        paths: source_relative
+    - name: go-grpc
+      out: ./pkg
+      opts:
+        paths: source_relative
+        require_unimplemented_servers: false
