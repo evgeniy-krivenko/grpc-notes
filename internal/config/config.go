@@ -8,6 +8,7 @@ type Config struct {
 
 type AppConfig struct {
 	LogLevel string `env:"LOG_LEVEL" env-default:"info"`
+	Pretty   bool   `env:"PRETTY" env-default:"false"`
 }
 
 type GRPCConfig struct {

@@ -37,12 +37,12 @@ func WithServices(opt ...Service) OptOptionsSetter {
 	return func(o *Options) { o.services = append(o.services, opt...) }
 }
 
-func WithUnaryInterceptors(opt ...grpc.UnaryServerInterceptor) OptOptionsSetter {
-	return func(o *Options) { o.unaryInterceptors = append(o.unaryInterceptors, opt...) }
+func WithLogger(opt logger) OptOptionsSetter {
+	return func(o *Options) { o.logger = opt }
 }
 
-func WithStreamInterceptors(opt ...grpc.StreamServerInterceptor) OptOptionsSetter {
-	return func(o *Options) { o.streamInterceptors = append(o.streamInterceptors, opt...) }
+func WithGrpcOptions(opt ...grpc.ServerOption) OptOptionsSetter {
+	return func(o *Options) { o.grpcOptions = append(o.grpcOptions, opt...) }
 }
 
 func WithMaxConnIdle(opt time.Duration) OptOptionsSetter {

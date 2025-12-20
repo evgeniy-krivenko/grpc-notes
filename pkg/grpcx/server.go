@@ -3,12 +3,17 @@ package grpcx
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"net"
 	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
 )
+
+type logger interface {
+	Info(ctx context.Context, msg string, attrs ...slog.Attr)
+}
 
 type Service interface {
 	RegisterService(grpc.ServiceRegistrar)
@@ -19,8 +24,9 @@ type Options struct {
 	addr     string    `option:"mandatory" validate:"required,hostname_port"`
 	services []Service `validate:"required,min=1"`
 
-	unaryInterceptors  []grpc.UnaryServerInterceptor
-	streamInterceptors []grpc.StreamServerInterceptor
+	logger logger
+
+	grpcOptions []grpc.ServerOption
 
 	maxConnIdle time.Duration `default:"5m"`
 	time        time.Duration `default:"2h"`
@@ -28,19 +34,30 @@ type Options struct {
 }
 
 type Server struct {
-	opts Options
-	srv  *grpc.Server
+	opts   Options
+	srv    *grpc.Server
+	logger logger
 }
 
 func New(opts Options) (*Server, error) {
-	srv := grpc.NewServer(
-		grpc.ChainUnaryInterceptor(opts.unaryInterceptors...),
-		grpc.ChainStreamInterceptor(opts.streamInterceptors...),
+	if err := opts.Validate(); err != nil {
+		return nil, fmt.Errorf("grpc server validate: %v", err)
+	}
+
+	if opts.logger == nil {
+		opts.logger = &noopLogger{}
+	}
+
+	opts.grpcOptions = append(opts.grpcOptions,
 		grpc.KeepaliveParams(keepalive.ServerParameters{
 			MaxConnectionIdle: opts.maxConnIdle,
 			Time:              opts.time,
 			Timeout:           opts.timeout,
 		}),
+	)
+
+	srv := grpc.NewServer(
+		opts.grpcOptions...,
 	)
 
 	for _, svc := range opts.services {
@@ -61,9 +78,24 @@ func (s *Server) Run(ctx context.Context) error {
 		s.srv.GracefulStop()
 	}()
 
+	s.opts.logger.Info(
+		ctx,
+		"run grpc server",
+		slog.String("addr", s.opts.addr),
+	)
+
 	if err := s.srv.Serve(listener); err != nil && err != grpc.ErrServerStopped {
 		return fmt.Errorf("listen and server: %v", err)
 	}
 
 	return nil
+}
+
+type noopLogger struct{}
+
+func (n *noopLogger) Info(
+	ctx context.Context,
+	msg string,
+	attrs ...slog.Attr,
+) {
 }

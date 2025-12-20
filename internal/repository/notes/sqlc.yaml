@@ -1,0 +1,15 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    queries: "notes.sql"
+    schema: "../../../migrate/migrations"
+    gen:
+      go:
+        package: "notesrepo"
+        out: "gen"
+        emit_pointers_for_null_types: true
+        emit_interface: true
+        emit_result_struct_pointers: false
+        omit_unused_structs: true
+        emit_empty_slices: true
+        sql_package: "pgx/v5"
