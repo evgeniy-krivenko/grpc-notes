@@ -50,7 +50,7 @@ func run() error {
 
 	validator, err := protovalidate.New()
 	if err != nil {
-        return fmt.Errorf("create protovalidator: %v", err)
+		return fmt.Errorf("create protovalidator: %v", err)
 	}
 
 	logger := slogx.Default()

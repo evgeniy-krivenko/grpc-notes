@@ -39,6 +39,10 @@ mod-download:
 run:
 	go run ./cmd/server/
 
+.PHONY: run-client
+run-client:
+	go run ./cmd/client/
+
 .PHONY: migrate-up
 migrate-up:
 	@$(LOCAL_BIN)/goose -dir migrate/migrations postgres $(GOOSE_DBSTRING) up

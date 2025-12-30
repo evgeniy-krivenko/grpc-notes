@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-var mockToken = "Bearer 304346c6-34ee-4624-a85e-a1b198626158"
+var MockToken = "Bearer 304346c6-34ee-4624-a85e-a1b198626158"
 
 func AuthInterceptor(
 	ctx context.Context,
@@ -25,7 +25,7 @@ func AuthInterceptor(
 
 	headers := md.Get("authorization")
 
-	if !slices.Contains(headers, mockToken) {
+	if !slices.Contains(headers, MockToken) {
 		return nil, status.Error(
 			codes.Unauthenticated,
 			"metadata doesn't contain correct authorization token",

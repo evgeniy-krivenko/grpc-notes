@@ -67,6 +67,13 @@ func (s *Service) CreateNote(ctx context.Context, req *v1.CreateNoteRequest) (*v
 }
 
 func (s *Service) GetNote(ctx context.Context, req *v1.GetNoteRequest) (*v1.GetNoteResponse, error) {
+	if req.GetNoteId() == 1 {
+		return nil, withNoteError(
+			codes.FailedPrecondition,
+			v1.ErrorCode_ERROR_CODE_INVALID_TEXT,
+		)
+	}
+
 	note, err := s.usecase.GetNote(ctx, req.NoteId)
 	if err != nil {
 		if errors.Is(err, entity.ErrNoteNotFound) {
@@ -78,6 +85,19 @@ func (s *Service) GetNote(ctx context.Context, req *v1.GetNoteRequest) (*v1.GetN
 	return &v1.GetNoteResponse{
 		Note: conv.ConvertNoteToProto(note),
 	}, nil
+}
+
+func withNoteError(code codes.Code, reason v1.ErrorCode) error {
+	st := status.New(code, "get note error")
+
+	noteErr := &v1.NoteError{Reason: reason}
+
+	st, err := st.WithDetails(noteErr)
+	if err != nil {
+		return err
+	}
+
+	return st.Err()
 }
 
 func (s *Service) GetNotes(ctx context.Context, req *v1.GetNotesRequest) (*v1.GetNotesResponse, error) {
