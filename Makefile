@@ -3,7 +3,7 @@ include .env
 LOCAL_BIN:=$(CURDIR)/bin
 PATH  := $(PATH):$(PWD)/bin
 
-GOOSE_DBSTRING := "host=$(DB_HOST) user=$(DB_USER) dbname=$(DB_NAME) password=$(DB_PASSWORD) sslmode=disable" 
+GOOSE_DBSTRING := "host=$(DB_HOST) port=$(DB_PORT) user=$(DB_USER) dbname=$(DB_NAME) password=$(DB_PASSWORD) sslmode=disable" 
 
 .PHONY: install-deps
 install-deps:

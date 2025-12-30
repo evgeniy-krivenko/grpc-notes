@@ -77,7 +77,10 @@ func run() error {
 		grpcx.WithLogger(logger),
 		grpcx.WithServices(notesSvc),
 		grpcx.WithGrpcOptions(
-			grpc.ChainUnaryInterceptor(ctxtr.MockAuthInterceptor(1)),
+			grpc.ChainUnaryInterceptor(
+				ctxtr.MockAuthInterceptor(1),
+				slogx.LoggingInterceptor,
+			),
 		),
 	))
 	if err != nil {
