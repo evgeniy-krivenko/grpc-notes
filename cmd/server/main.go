@@ -79,6 +79,7 @@ func run() error {
 		grpcx.WithGrpcOptions(
 			grpc.ChainUnaryInterceptor(
 				ctxtr.MockAuthInterceptor(1),
+				grpcx.AuthInterceptor,
 				slogx.LoggingInterceptor,
 			),
 		),
