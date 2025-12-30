@@ -3,10 +3,19 @@ syntax = "proto3";
 option go_package = "github.com/evgeniy-krivenko/grpc-notes/pgk/api/v1";
 
 import "google/type/datetime.proto";
+import "buf/validate/validate.proto";
 
 message CreateNoteRequest {
-  string title = 1;
+  string title = 1 [
+    (buf.validate.field).string.min_len = 5,
+    (buf.validate.field).string.max_len = 30
+  ];
   string content = 2;
+
+  option (buf.validate.message).cel = {
+    message: "title should not to be eqaul content",
+    expression: "this.title != this.content"
+  };
 }
 
 message CreateNoteResponse {

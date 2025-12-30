@@ -9,6 +9,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"buf.build/go/protovalidate"
+	protovalidateic "github.com/grpc-ecosystem/go-grpc-middleware/v2/interceptors/protovalidate"
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/keepalive"
@@ -44,6 +46,11 @@ func run() error {
 		cfg.App.Pretty,
 	); err != nil {
 		return fmt.Errorf("init logger: %v", err)
+	}
+
+	validator, err := protovalidate.New()
+	if err != nil {
+        return fmt.Errorf("create protovalidator: %v", err)
 	}
 
 	logger := slogx.Default()
@@ -82,6 +89,7 @@ func run() error {
 				ctxtr.MockAuthInterceptor(1),
 				grpcx.AuthInterceptor,
 				slogx.LoggingInterceptor,
+				protovalidateic.UnaryServerInterceptor(validator),
 			),
 			grpc.MaxConcurrentStreams(cfg.GRPC.MaxConcurrentStreams),
 			grpc.KeepaliveParams(keepalive.ServerParameters{
