@@ -1,5 +1,7 @@
 package config
 
+import "time"
+
 type Config struct {
 	App      AppConfig      `env-prefix:"APP_"`
 	GRPC     GRPCConfig     `env-prefix:"GRPC_"`
@@ -12,7 +14,10 @@ type AppConfig struct {
 }
 
 type GRPCConfig struct {
-	Addr string `env:"ADDR" env-default:":50051"`
+	Addr                 string        `env:"ADDR" env-default:":50051"`
+	KeepaliveTime        time.Duration `env:"KEEPALIVE_TIME" env-default:"60s"`
+	KeepaliveTimeout     time.Duration `env:"KEEPALIVE_TIMEOUT" env-default:"30s"`
+	MaxConcurrentStreams uint32        `env:"MAX_CONCURRENT_STREAMS" env-default:"50"`
 }
 
 type DatabaseConfig struct {

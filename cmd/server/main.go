@@ -11,6 +11,7 @@ import (
 
 	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/keepalive"
 
 	notesapi "github.com/evgeniy-krivenko/grpc-notes/internal/api/notes"
 	"github.com/evgeniy-krivenko/grpc-notes/internal/config"
@@ -82,6 +83,11 @@ func run() error {
 				grpcx.AuthInterceptor,
 				slogx.LoggingInterceptor,
 			),
+			grpc.MaxConcurrentStreams(cfg.GRPC.MaxConcurrentStreams),
+			grpc.KeepaliveParams(keepalive.ServerParameters{
+				Time:    cfg.GRPC.KeepaliveTime,
+				Timeout: cfg.GRPC.KeepaliveTimeout,
+			}),
 		),
 	))
 	if err != nil {
