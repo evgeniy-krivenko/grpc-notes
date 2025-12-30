@@ -8,7 +8,6 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
-	"google.golang.org/protobuf/types/known/emptypb"
 
 	"github.com/evgeniy-krivenko/grpc-notes/internal/api/notes/converter"
 	"github.com/evgeniy-krivenko/grpc-notes/internal/api/notes/converter/generated"
@@ -51,21 +50,23 @@ func (s *Service) RegisterService(srv grpc.ServiceRegistrar) {
 	v1.RegisterNoteAPIServer(srv, s)
 }
 
-func (s *Service) CreateNote(ctx context.Context, req *v1.CreateNoteRequest) (*v1.Note, error) {
-    userID, err := ctxtr.UserID(ctx)
-    if err != nil {
-        return nil, status.Errorf(codes.Unauthenticated, "create note: %v", err)
-    }
+func (s *Service) CreateNote(ctx context.Context, req *v1.CreateNoteRequest) (*v1.CreateNoteResponse, error) {
+	userID, err := ctxtr.UserID(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Unauthenticated, "create note: %v", err)
+	}
 
 	note, err := s.usecase.CreateNote(ctx, userID, req.Title, req.Content)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "create note: %v", err)
 	}
 
-	return conv.ConvertNoteToProto(note), nil
+	protoNote := conv.ConvertNoteToProto(note)
+
+	return &v1.CreateNoteResponse{Note: protoNote}, nil
 }
 
-func (s *Service) GetNote(ctx context.Context, req *v1.GetNoteRequest) (*v1.Note, error) {
+func (s *Service) GetNote(ctx context.Context, req *v1.GetNoteRequest) (*v1.GetNoteResponse, error) {
 	note, err := s.usecase.GetNote(ctx, req.NoteId)
 	if err != nil {
 		if errors.Is(err, entity.ErrNoteNotFound) {
@@ -74,7 +75,9 @@ func (s *Service) GetNote(ctx context.Context, req *v1.GetNoteRequest) (*v1.Note
 		return nil, status.Errorf(codes.Internal, "get note: %v", err)
 	}
 
-	return conv.ConvertNoteToProto(note), nil
+	return &v1.GetNoteResponse{
+		Note: conv.ConvertNoteToProto(note),
+	}, nil
 }
 
 func (s *Service) GetNotes(ctx context.Context, req *v1.GetNotesRequest) (*v1.GetNotesResponse, error) {
@@ -88,10 +91,10 @@ func (s *Service) GetNotes(ctx context.Context, req *v1.GetNotesRequest) (*v1.Ge
 	}, nil
 }
 
-func (s *Service) DeleteNote(ctx context.Context, req *v1.DeleteNoteRequest) (*emptypb.Empty, error) {
+func (s *Service) DeleteNote(ctx context.Context, req *v1.DeleteNoteRequest) (*v1.DeleteNoteResponse, error) {
 	if err := s.usecase.DeleteNote(ctx, req.NoteId); err != nil {
 		return nil, status.Errorf(codes.Internal, "delete note: %v", err)
 	}
 
-	return &emptypb.Empty{}, nil
+	return &v1.DeleteNoteResponse{}, nil
 }

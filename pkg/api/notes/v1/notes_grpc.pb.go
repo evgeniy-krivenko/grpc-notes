@@ -11,7 +11,6 @@ import (
 	grpc "google.golang.org/grpc"
 	codes "google.golang.org/grpc/codes"
 	status "google.golang.org/grpc/status"
-	emptypb "google.golang.org/protobuf/types/known/emptypb"
 )
 
 // This is a compile-time assertion to ensure that this generated file
@@ -23,10 +22,10 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type NoteAPIClient interface {
-	CreateNote(ctx context.Context, in *CreateNoteRequest, opts ...grpc.CallOption) (*Note, error)
+	CreateNote(ctx context.Context, in *CreateNoteRequest, opts ...grpc.CallOption) (*CreateNoteResponse, error)
 	GetNotes(ctx context.Context, in *GetNotesRequest, opts ...grpc.CallOption) (*GetNotesResponse, error)
-	GetNote(ctx context.Context, in *GetNoteRequest, opts ...grpc.CallOption) (*Note, error)
-	DeleteNote(ctx context.Context, in *DeleteNoteRequest, opts ...grpc.CallOption) (*emptypb.Empty, error)
+	GetNote(ctx context.Context, in *GetNoteRequest, opts ...grpc.CallOption) (*GetNoteResponse, error)
+	DeleteNote(ctx context.Context, in *DeleteNoteRequest, opts ...grpc.CallOption) (*DeleteNoteResponse, error)
 }
 
 type noteAPIClient struct {
@@ -37,8 +36,8 @@ func NewNoteAPIClient(cc grpc.ClientConnInterface) NoteAPIClient {
 	return &noteAPIClient{cc}
 }
 
-func (c *noteAPIClient) CreateNote(ctx context.Context, in *CreateNoteRequest, opts ...grpc.CallOption) (*Note, error) {
-	out := new(Note)
+func (c *noteAPIClient) CreateNote(ctx context.Context, in *CreateNoteRequest, opts ...grpc.CallOption) (*CreateNoteResponse, error) {
+	out := new(CreateNoteResponse)
 	err := c.cc.Invoke(ctx, "/api.notest.v1.NoteAPI/CreateNote", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -55,8 +54,8 @@ func (c *noteAPIClient) GetNotes(ctx context.Context, in *GetNotesRequest, opts 
 	return out, nil
 }
 
-func (c *noteAPIClient) GetNote(ctx context.Context, in *GetNoteRequest, opts ...grpc.CallOption) (*Note, error) {
-	out := new(Note)
+func (c *noteAPIClient) GetNote(ctx context.Context, in *GetNoteRequest, opts ...grpc.CallOption) (*GetNoteResponse, error) {
+	out := new(GetNoteResponse)
 	err := c.cc.Invoke(ctx, "/api.notest.v1.NoteAPI/GetNote", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -64,8 +63,8 @@ func (c *noteAPIClient) GetNote(ctx context.Context, in *GetNoteRequest, opts ..
 	return out, nil
 }
 
-func (c *noteAPIClient) DeleteNote(ctx context.Context, in *DeleteNoteRequest, opts ...grpc.CallOption) (*emptypb.Empty, error) {
-	out := new(emptypb.Empty)
+func (c *noteAPIClient) DeleteNote(ctx context.Context, in *DeleteNoteRequest, opts ...grpc.CallOption) (*DeleteNoteResponse, error) {
+	out := new(DeleteNoteResponse)
 	err := c.cc.Invoke(ctx, "/api.notest.v1.NoteAPI/DeleteNote", in, out, opts...)
 	if err != nil {
 		return nil, err
@@ -77,26 +76,26 @@ func (c *noteAPIClient) DeleteNote(ctx context.Context, in *DeleteNoteRequest, o
 // All implementations should embed UnimplementedNoteAPIServer
 // for forward compatibility
 type NoteAPIServer interface {
-	CreateNote(context.Context, *CreateNoteRequest) (*Note, error)
+	CreateNote(context.Context, *CreateNoteRequest) (*CreateNoteResponse, error)
 	GetNotes(context.Context, *GetNotesRequest) (*GetNotesResponse, error)
-	GetNote(context.Context, *GetNoteRequest) (*Note, error)
-	DeleteNote(context.Context, *DeleteNoteRequest) (*emptypb.Empty, error)
+	GetNote(context.Context, *GetNoteRequest) (*GetNoteResponse, error)
+	DeleteNote(context.Context, *DeleteNoteRequest) (*DeleteNoteResponse, error)
 }
 
 // UnimplementedNoteAPIServer should be embedded to have forward compatible implementations.
 type UnimplementedNoteAPIServer struct {
 }
 
-func (UnimplementedNoteAPIServer) CreateNote(context.Context, *CreateNoteRequest) (*Note, error) {
+func (UnimplementedNoteAPIServer) CreateNote(context.Context, *CreateNoteRequest) (*CreateNoteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CreateNote not implemented")
 }
 func (UnimplementedNoteAPIServer) GetNotes(context.Context, *GetNotesRequest) (*GetNotesResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetNotes not implemented")
 }
-func (UnimplementedNoteAPIServer) GetNote(context.Context, *GetNoteRequest) (*Note, error) {
+func (UnimplementedNoteAPIServer) GetNote(context.Context, *GetNoteRequest) (*GetNoteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetNote not implemented")
 }
-func (UnimplementedNoteAPIServer) DeleteNote(context.Context, *DeleteNoteRequest) (*emptypb.Empty, error) {
+func (UnimplementedNoteAPIServer) DeleteNote(context.Context, *DeleteNoteRequest) (*DeleteNoteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteNote not implemented")
 }
 
