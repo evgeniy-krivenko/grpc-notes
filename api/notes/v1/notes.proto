@@ -13,4 +13,6 @@ service NoteAPI {
   rpc DeleteNote(DeleteNoteRequest) returns (DeleteNoteResponse);
   rpc SubscribeToEvents(SubscribeToEventRequest)
       returns (stream SubscribeToEventResponse);
+
+  rpc UploadMetrics(stream MetricsRequest) returns (SummaryResponse);
 }

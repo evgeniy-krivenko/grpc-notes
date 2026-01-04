@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"time"
 
 	"google.golang.org/grpc"
@@ -142,7 +143,7 @@ func (s *Service) SubscribeToEvents(req *v1.SubscribeToEventRequest, stream v1.N
 	for {
 		select {
 		case <-ctx.Done():
-            slogx.Debug(ctx, "context canceled")
+			slogx.Debug(ctx, "context canceled")
 			return nil
 
 		case <-ticker.C:
@@ -174,7 +175,38 @@ func (s *Service) SubscribeToEvents(req *v1.SubscribeToEventRequest, stream v1.N
 	}
 }
 
-func sendHealthCheck(ctx context.Context, stream v1.NoteAPI_SubscribeToEventsServer) error {
+func (s *Service) UploadMetrics(stream v1.NoteAPI_UploadMetricsServer) error {
+	ctx := stream.Context()
+
+	var sum v1.SummaryResponse
+	for {
+		if ctx.Err() != nil {
+			slogx.Info(ctx, "context canceled")
+			break
+		}
+
+		resp, err := stream.Recv()
+		if err != nil {
+			if err == io.EOF {
+				slogx.Info(ctx, "client close stream")
+				break
+			}
+
+			return err
+		}
+
+		sum.TotalView += resp.NoteViewCounter
+		slogx.Info(ctx, "receive metrics from client")
+	}
+
+	if err := stream.SendAndClose(&sum); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func sendHealthCheck(_ context.Context, stream v1.NoteAPI_SubscribeToEventsServer) error {
 	healthCheck := &v1.HealthCheck{Timestamp: converter.ConvertTimeToDateTime(time.Now())}
 	hc := &v1.SubscribeToEventResponse_HealthCheck{HealthCheck: healthCheck}
 

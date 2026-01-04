@@ -27,6 +27,7 @@ type NoteAPIClient interface {
 	GetNote(ctx context.Context, in *GetNoteRequest, opts ...grpc.CallOption) (*GetNoteResponse, error)
 	DeleteNote(ctx context.Context, in *DeleteNoteRequest, opts ...grpc.CallOption) (*DeleteNoteResponse, error)
 	SubscribeToEvents(ctx context.Context, in *SubscribeToEventRequest, opts ...grpc.CallOption) (NoteAPI_SubscribeToEventsClient, error)
+	UploadMetrics(ctx context.Context, opts ...grpc.CallOption) (NoteAPI_UploadMetricsClient, error)
 }
 
 type noteAPIClient struct {
@@ -105,6 +106,40 @@ func (x *noteAPISubscribeToEventsClient) Recv() (*SubscribeToEventResponse, erro
 	return m, nil
 }
 
+func (c *noteAPIClient) UploadMetrics(ctx context.Context, opts ...grpc.CallOption) (NoteAPI_UploadMetricsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &NoteAPI_ServiceDesc.Streams[1], "/api.notest.v1.NoteAPI/UploadMetrics", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &noteAPIUploadMetricsClient{stream}
+	return x, nil
+}
+
+type NoteAPI_UploadMetricsClient interface {
+	Send(*MetricsRequest) error
+	CloseAndRecv() (*SummaryResponse, error)
+	grpc.ClientStream
+}
+
+type noteAPIUploadMetricsClient struct {
+	grpc.ClientStream
+}
+
+func (x *noteAPIUploadMetricsClient) Send(m *MetricsRequest) error {
+	return x.ClientStream.SendMsg(m)
+}
+
+func (x *noteAPIUploadMetricsClient) CloseAndRecv() (*SummaryResponse, error) {
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	m := new(SummaryResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // NoteAPIServer is the server API for NoteAPI service.
 // All implementations should embed UnimplementedNoteAPIServer
 // for forward compatibility
@@ -114,6 +149,7 @@ type NoteAPIServer interface {
 	GetNote(context.Context, *GetNoteRequest) (*GetNoteResponse, error)
 	DeleteNote(context.Context, *DeleteNoteRequest) (*DeleteNoteResponse, error)
 	SubscribeToEvents(*SubscribeToEventRequest, NoteAPI_SubscribeToEventsServer) error
+	UploadMetrics(NoteAPI_UploadMetricsServer) error
 }
 
 // UnimplementedNoteAPIServer should be embedded to have forward compatible implementations.
@@ -134,6 +170,9 @@ func (UnimplementedNoteAPIServer) DeleteNote(context.Context, *DeleteNoteRequest
 }
 func (UnimplementedNoteAPIServer) SubscribeToEvents(*SubscribeToEventRequest, NoteAPI_SubscribeToEventsServer) error {
 	return status.Errorf(codes.Unimplemented, "method SubscribeToEvents not implemented")
+}
+func (UnimplementedNoteAPIServer) UploadMetrics(NoteAPI_UploadMetricsServer) error {
+	return status.Errorf(codes.Unimplemented, "method UploadMetrics not implemented")
 }
 
 // UnsafeNoteAPIServer may be embedded to opt out of forward compatibility for this service.
@@ -240,6 +279,32 @@ func (x *noteAPISubscribeToEventsServer) Send(m *SubscribeToEventResponse) error
 	return x.ServerStream.SendMsg(m)
 }
 
+func _NoteAPI_UploadMetrics_Handler(srv interface{}, stream grpc.ServerStream) error {
+	return srv.(NoteAPIServer).UploadMetrics(&noteAPIUploadMetricsServer{stream})
+}
+
+type NoteAPI_UploadMetricsServer interface {
+	SendAndClose(*SummaryResponse) error
+	Recv() (*MetricsRequest, error)
+	grpc.ServerStream
+}
+
+type noteAPIUploadMetricsServer struct {
+	grpc.ServerStream
+}
+
+func (x *noteAPIUploadMetricsServer) SendAndClose(m *SummaryResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
+func (x *noteAPIUploadMetricsServer) Recv() (*MetricsRequest, error) {
+	m := new(MetricsRequest)
+	if err := x.ServerStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // NoteAPI_ServiceDesc is the grpc.ServiceDesc for NoteAPI service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -269,6 +334,11 @@ var NoteAPI_ServiceDesc = grpc.ServiceDesc{
 			StreamName:    "SubscribeToEvents",
 			Handler:       _NoteAPI_SubscribeToEvents_Handler,
 			ServerStreams: true,
+		},
+		{
+			StreamName:    "UploadMetrics",
+			Handler:       _NoteAPI_UploadMetrics_Handler,
+			ClientStreams: true,
 		},
 	},
 	Metadata: "api/notes/v1/notes.proto",

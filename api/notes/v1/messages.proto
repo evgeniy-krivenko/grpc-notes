@@ -68,3 +68,10 @@ message Note {
   google.type.DateTime updated_at = 6;
 }
 
+message MetricsRequest {
+  int64 note_view_counter = 1;
+}
+
+message SummaryResponse {
+  int64 total_view = 1;
+}

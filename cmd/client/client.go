@@ -49,7 +49,10 @@ func run() error {
 	c := pb.NewNoteAPIClient(conn)
 
 	// getNote(ctx, c)
-	subscribeToEvents(ctx, c)
+	// subscribeToEvents(ctx, c)
+	if err := sendMetrics(ctx, c); err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -104,6 +107,29 @@ func getNote(ctx context.Context, client pb.NoteAPIClient) {
 	}
 
 	slogx.Info(ctx, "get note success", slog.Any("response", resp))
+}
+
+func sendMetrics(ctx context.Context, client pb.NoteAPIClient) error {
+	stream, err := client.UploadMetrics(ctx)
+	if err != nil {
+		return fmt.Errorf("send metrics: %v", err)
+	}
+
+	for i := range 10 {
+		if err := stream.Send(&pb.MetricsRequest{NoteViewCounter: int64(i)}); err != nil {
+			return err
+		}
+
+		slogx.Info(ctx, "send metrics to server")
+	}
+
+	reps, err := stream.CloseAndRecv()
+	if err != nil {
+		return err
+	}
+
+	slogx.Info(ctx, "receive summary from server", slog.Any("summary", reps))
+	return nil
 }
 
 func NoteError(err error) (*pb.NoteError, bool) {
