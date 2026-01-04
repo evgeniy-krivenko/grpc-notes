@@ -26,6 +26,7 @@ type NoteAPIClient interface {
 	GetNotes(ctx context.Context, in *GetNotesRequest, opts ...grpc.CallOption) (*GetNotesResponse, error)
 	GetNote(ctx context.Context, in *GetNoteRequest, opts ...grpc.CallOption) (*GetNoteResponse, error)
 	DeleteNote(ctx context.Context, in *DeleteNoteRequest, opts ...grpc.CallOption) (*DeleteNoteResponse, error)
+	SubscribeToEvents(ctx context.Context, in *SubscribeToEventRequest, opts ...grpc.CallOption) (NoteAPI_SubscribeToEventsClient, error)
 }
 
 type noteAPIClient struct {
@@ -72,6 +73,38 @@ func (c *noteAPIClient) DeleteNote(ctx context.Context, in *DeleteNoteRequest, o
 	return out, nil
 }
 
+func (c *noteAPIClient) SubscribeToEvents(ctx context.Context, in *SubscribeToEventRequest, opts ...grpc.CallOption) (NoteAPI_SubscribeToEventsClient, error) {
+	stream, err := c.cc.NewStream(ctx, &NoteAPI_ServiceDesc.Streams[0], "/api.notest.v1.NoteAPI/SubscribeToEvents", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &noteAPISubscribeToEventsClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type NoteAPI_SubscribeToEventsClient interface {
+	Recv() (*SubscribeToEventResponse, error)
+	grpc.ClientStream
+}
+
+type noteAPISubscribeToEventsClient struct {
+	grpc.ClientStream
+}
+
+func (x *noteAPISubscribeToEventsClient) Recv() (*SubscribeToEventResponse, error) {
+	m := new(SubscribeToEventResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // NoteAPIServer is the server API for NoteAPI service.
 // All implementations should embed UnimplementedNoteAPIServer
 // for forward compatibility
@@ -80,6 +113,7 @@ type NoteAPIServer interface {
 	GetNotes(context.Context, *GetNotesRequest) (*GetNotesResponse, error)
 	GetNote(context.Context, *GetNoteRequest) (*GetNoteResponse, error)
 	DeleteNote(context.Context, *DeleteNoteRequest) (*DeleteNoteResponse, error)
+	SubscribeToEvents(*SubscribeToEventRequest, NoteAPI_SubscribeToEventsServer) error
 }
 
 // UnimplementedNoteAPIServer should be embedded to have forward compatible implementations.
@@ -97,6 +131,9 @@ func (UnimplementedNoteAPIServer) GetNote(context.Context, *GetNoteRequest) (*Ge
 }
 func (UnimplementedNoteAPIServer) DeleteNote(context.Context, *DeleteNoteRequest) (*DeleteNoteResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method DeleteNote not implemented")
+}
+func (UnimplementedNoteAPIServer) SubscribeToEvents(*SubscribeToEventRequest, NoteAPI_SubscribeToEventsServer) error {
+	return status.Errorf(codes.Unimplemented, "method SubscribeToEvents not implemented")
 }
 
 // UnsafeNoteAPIServer may be embedded to opt out of forward compatibility for this service.
@@ -182,6 +219,27 @@ func _NoteAPI_DeleteNote_Handler(srv interface{}, ctx context.Context, dec func(
 	return interceptor(ctx, in, info, handler)
 }
 
+func _NoteAPI_SubscribeToEvents_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(SubscribeToEventRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(NoteAPIServer).SubscribeToEvents(m, &noteAPISubscribeToEventsServer{stream})
+}
+
+type NoteAPI_SubscribeToEventsServer interface {
+	Send(*SubscribeToEventResponse) error
+	grpc.ServerStream
+}
+
+type noteAPISubscribeToEventsServer struct {
+	grpc.ServerStream
+}
+
+func (x *noteAPISubscribeToEventsServer) Send(m *SubscribeToEventResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // NoteAPI_ServiceDesc is the grpc.ServiceDesc for NoteAPI service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -206,6 +264,12 @@ var NoteAPI_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _NoteAPI_DeleteNote_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "SubscribeToEvents",
+			Handler:       _NoteAPI_SubscribeToEvents_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "api/notes/v1/notes.proto",
 }

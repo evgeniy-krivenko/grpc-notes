@@ -9,6 +9,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"google.golang.org/grpc/codes"
 )
 
 const LevelDebug = slog.Level(-4)
@@ -16,8 +18,9 @@ const LevelInfo = slog.Level(0)
 const LevelWarn = slog.Level(4)
 const LevelError = slog.Level(8)
 
-func Err(value error) slog.Attr    { return slog.Any("err", value) }
-func UserId(value int64) slog.Attr { return slog.Int64("user_id", value) }
+func Err(value error) slog.Attr           { return slog.Any("err", value) }
+func GrpcCode(value codes.Code) slog.Attr { return slog.Any("grpc_code", value) }
+func UserId(value int64) slog.Attr        { return slog.Int64("user_id", value) }
 
 func ParseLevel(s string) (slog.Level, error) {
 	switch strings.ToUpper(s) {

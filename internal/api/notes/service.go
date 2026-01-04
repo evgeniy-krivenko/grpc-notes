@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
@@ -15,6 +16,7 @@ import (
 	"github.com/evgeniy-krivenko/grpc-notes/internal/entity"
 	v1 "github.com/evgeniy-krivenko/grpc-notes/pkg/api/notes/v1"
 	"github.com/evgeniy-krivenko/grpc-notes/pkg/grpcx"
+	"github.com/evgeniy-krivenko/grpc-notes/pkg/logger/slogx"
 )
 
 var _ grpcx.Service = (*Service)(nil)
@@ -26,6 +28,7 @@ type notesUsecase interface {
 	GetNote(ctx context.Context, id int64) (entity.Note, error)
 	GetNotesByUserID(ctx context.Context, userID int64) ([]entity.Note, error)
 	DeleteNote(ctx context.Context, id int64) error
+	SubscribeToEvents(ctx context.Context, userID int64) (<-chan entity.CreateNoteEvent, error)
 }
 
 //go:generate go run github.com/kazhuravlev/options-gen/cmd/options-gen@v0.33.2 -out-filename=service_options.gen.go -from-struct=Options
@@ -117,4 +120,67 @@ func (s *Service) DeleteNote(ctx context.Context, req *v1.DeleteNoteRequest) (*v
 	}
 
 	return &v1.DeleteNoteResponse{}, nil
+}
+
+func (s *Service) SubscribeToEvents(req *v1.SubscribeToEventRequest, stream v1.NoteAPI_SubscribeToEventsServer) error {
+	ctx := stream.Context()
+
+	slogx.Info(ctx, "client subscribe to events", slogx.UserId(req.UserId))
+
+	if err := sendHealthCheck(ctx, stream); err != nil {
+		return fmt.Errorf("send first health check: %v", err)
+	}
+
+	events, err := s.usecase.SubscribeToEvents(ctx, req.GetUserId())
+	if err != nil {
+		return fmt.Errorf("get events: %v", err)
+	}
+
+	ticker := time.NewTicker(time.Second * 5)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ctx.Done():
+            slogx.Debug(ctx, "context canceled")
+			return nil
+
+		case <-ticker.C:
+			if err := sendHealthCheck(ctx, stream); err != nil {
+				return err
+			}
+		case event := <-events:
+
+			n := conv.ConvertNoteToProto(event.CreatedNote)
+			note := v1.SubscribeToEventResponse_CreatedNote{CreatedNote: n}
+			resp := v1.SubscribeToEventResponse{Result: &note}
+
+			if err := stream.Send(&resp); err != nil {
+				code := status.Code(err)
+
+				switch code {
+				case codes.Canceled | codes.DeadlineExceeded:
+					slogx.Info(ctx, "client unsubscribe", slogx.GrpcCode(code))
+					return nil
+				case codes.Unavailable:
+					slogx.Warn(ctx, "client unavailable")
+					return nil
+				default:
+					slogx.Error(ctx, "unexpected send error", slogx.Err(err), slogx.GrpcCode(code))
+					return err
+				}
+			}
+		}
+	}
+}
+
+func sendHealthCheck(ctx context.Context, stream v1.NoteAPI_SubscribeToEventsServer) error {
+	healthCheck := &v1.HealthCheck{Timestamp: converter.ConvertTimeToDateTime(time.Now())}
+	hc := &v1.SubscribeToEventResponse_HealthCheck{HealthCheck: healthCheck}
+
+	if err := stream.Send(&v1.SubscribeToEventResponse{Result: hc}); err != nil {
+		return fmt.Errorf("send health check message: %v", err)
+	}
+
+	return nil
 }

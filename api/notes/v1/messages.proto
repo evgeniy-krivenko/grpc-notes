@@ -44,6 +44,21 @@ message DeleteNoteRequest {
 
 message DeleteNoteResponse {}
 
+message SubscribeToEventRequest {
+  int64 user_id = 1;
+}
+
+message SubscribeToEventResponse {
+  oneof result {
+    Note created_note = 1;
+    HealthCheck HealthCheck = 2;
+  }
+}
+
+message HealthCheck {
+  google.type.DateTime timestamp = 1;
+}
+
 message Note {
   int64 id = 1;
   int64 user_id = 2;

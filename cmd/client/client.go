@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"fmt"
+	"io"
 	"log"
 	"log/slog"
 	"os"
@@ -18,7 +20,13 @@ import (
 )
 
 func main() {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	if err := run(); err != nil {
+		log.Fatalf("run: %v", err)
+	}
+}
+
+func run() error {
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*60)
 	defer cancel()
 
 	if err := slogx.InitGlobal(
@@ -26,7 +34,7 @@ func main() {
 		"info",
 		true,
 	); err != nil {
-		log.Fatalf("init logger: %v", err)
+		return fmt.Errorf("init logger: %v", err)
 	}
 
 	conn, err := grpc.NewClient(
@@ -34,16 +42,56 @@ func main() {
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	)
 	if err != nil {
-		log.Fatalf("new client conn: %v", err)
+		return fmt.Errorf("new client conn: %v", err)
 	}
 	defer conn.Close()
 
 	c := pb.NewNoteAPIClient(conn)
 
+	// getNote(ctx, c)
+	subscribeToEvents(ctx, c)
+
+	return nil
+}
+
+func subscribeToEvents(ctx context.Context, client pb.NoteAPIClient) error {
+	req := pb.SubscribeToEventRequest{UserId: 1}
+
+	streamer, err := client.SubscribeToEvents(ctx, &req)
+	if err != nil {
+		return fmt.Errorf("subscribe to events: %v", err)
+	}
+
+	for {
+		if ctx.Err() != nil {
+			slogx.Info(ctx, "context canceled")
+			return nil
+		}
+
+		resp, err := streamer.Recv()
+		if err != nil {
+			if err == io.EOF {
+				slogx.Info(ctx, "server closed stream")
+				return nil
+			}
+
+			return fmt.Errorf("subscribe to events recv: %v", err)
+		}
+
+		switch r := resp.Result.(type) {
+		case *pb.SubscribeToEventResponse_HealthCheck:
+			log.Printf("server sent health check")
+		case *pb.SubscribeToEventResponse_CreatedNote:
+			log.Printf("response of created note: %v", r.CreatedNote)
+		}
+	}
+}
+
+func getNote(ctx context.Context, client pb.NoteAPIClient) {
 	md := metadata.New(map[string]string{"authorization": grpcx.MockToken})
 	ctx = metadata.NewOutgoingContext(ctx, md)
 
-	resp, err := c.GetNote(ctx, &pb.GetNoteRequest{NoteId: 1})
+	resp, err := client.GetNote(ctx, &pb.GetNoteRequest{NoteId: 1})
 	if err != nil {
 		if noteErr, ok := NoteError(err); ok {
 			slogx.Error(ctx, "note error", slog.String(

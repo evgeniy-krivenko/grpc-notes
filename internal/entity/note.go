@@ -15,3 +15,7 @@ type Note struct {
 	CreatedAt time.Time
 	UpdatedAt time.Time
 }
+
+type CreateNoteEvent struct {
+	CreatedNote Note
+}

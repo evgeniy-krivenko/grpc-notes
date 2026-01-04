@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/imkira/go-observer"
+
 	"github.com/evgeniy-krivenko/grpc-notes/internal/entity"
 	"github.com/evgeniy-krivenko/grpc-notes/pkg/logger/slogx"
 )
@@ -22,6 +24,7 @@ type Options struct {
 
 type Usecase struct {
 	Options
+	observer observer.Property
 }
 
 func New(opts Options) (*Usecase, error) {
@@ -29,7 +32,9 @@ func New(opts Options) (*Usecase, error) {
 		return nil, fmt.Errorf("validate notes usecase options: %v", err)
 	}
 
-	return &Usecase{Options: opts}, nil
+	prop := observer.NewProperty(entity.Note{})
+
+	return &Usecase{Options: opts, observer: prop}, nil
 }
 
 func (u *Usecase) CreateNote(ctx context.Context, userID int64, title, content string) (entity.Note, error) {
@@ -38,7 +43,9 @@ func (u *Usecase) CreateNote(ctx context.Context, userID int64, title, content s
 		return entity.Note{}, fmt.Errorf("usecase create note: %w", err)
 	}
 
-    slogx.Info(ctx, "success to create note", slogx.UserId(userID))
+	u.observer.Update(note)
+
+	slogx.Info(ctx, "success to create note", slogx.UserId(userID))
 	return note, nil
 }
 
@@ -66,4 +73,32 @@ func (u *Usecase) DeleteNote(ctx context.Context, id int64) error {
 	}
 
 	return nil
+}
+
+func (u *Usecase) SubscribeToEvents(ctx context.Context, userID int64) (<-chan entity.CreateNoteEvent, error) {
+	// ignore user id for simplicity
+
+	stream := u.observer.Observe()
+
+	result := make(chan entity.CreateNoteEvent)
+	go func() {
+		defer close(result)
+		for {
+			select {
+			case <-ctx.Done():
+				return
+
+			case <-stream.Changes():
+				note := stream.Next().(entity.Note)
+
+				select {
+				case <-ctx.Done():
+					return
+				case result <- entity.CreateNoteEvent{CreatedNote: note}:
+				}
+			}
+		}
+	}()
+
+	return result, nil
 }
