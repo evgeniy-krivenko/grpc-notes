@@ -5,8 +5,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
+	"math/rand"
 	"time"
 
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -204,6 +207,125 @@ func (s *Service) UploadMetrics(stream v1.NoteAPI_UploadMetricsServer) error {
 	}
 
 	return nil
+}
+
+func (s *Service) Chat(stream v1.NoteAPI_ChatServer) error {
+	ctx := stream.Context()
+
+	messages := getMessages()
+	eg, ctx := errgroup.WithContext(ctx)
+
+	ackChan := make(chan string)
+
+	eg.Go(func() error {
+		defer close(ackChan)
+
+		for {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+
+			msg, err := stream.Recv()
+			if err != nil {
+				if err == io.EOF {
+					slogx.Info(ctx, "client closed stream")
+					return nil
+				}
+
+				return fmt.Errorf("receive msg: %v", err)
+			}
+
+			correlationID := msg.CorrelationId
+
+			eg.Go(func() error {
+				select {
+				case <-ctx.Done():
+					return nil
+				case ackChan <- correlationID:
+				}
+
+				return nil
+			})
+
+			slogx.Info(ctx, "receive msg from client", slog.String("msg", msg.GetContent()))
+		}
+	})
+
+	eg.Go(func() error {
+		ticker := time.NewTicker(500 * time.Millisecond)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ctx.Done():
+				slogx.Info(ctx, "context canceled in send gorutine")
+				return nil
+			case <-ticker.C:
+			}
+
+			idx := rand.Intn(10)
+			msg := messages[idx]
+
+			if err := stream.Send(&v1.ServerMessage{
+				Content: msg,
+			}); err != nil {
+				return fmt.Errorf("send msg: %v", err)
+			}
+		}
+	})
+
+	eg.Go(func() error {
+		for {
+			select {
+			case <-ctx.Done():
+				slogx.Info(ctx, "context canceled in ack gorutine")
+				return nil
+			case correlationID, ok := <-ackChan:
+				if !ok {
+					return nil
+				}
+
+				msg := v1.ServerMessage{IsAck: true, CorrelationId: correlationID}
+
+				if err := stream.Send(&msg); err != nil {
+					slogx.Error(ctx, "while ack client message", slog.String("correlation_id", correlationID))
+
+					continue
+				}
+
+				slogx.Info(ctx, "success to ack message", slog.String("correlation_id", correlationID))
+			}
+		}
+	})
+
+	if err := eg.Wait(); err != nil && err != context.Canceled {
+		return fmt.Errorf("stream waiting: %v", err)
+	}
+
+	return nil
+}
+
+func getMessages() map[int]string {
+	phrases := []string{
+		"hello",
+		"how are you?",
+		"how does going?",
+		"okey",
+		"stay in touch",
+		"nice to meet you",
+		"good morning",
+		"afternoon!",
+		"hi, fellas!",
+		"hello, people!",
+	}
+
+	messages := make(map[int]string, 10)
+
+	for idx, phrase := range phrases {
+		messages[idx] = phrase
+	}
+
+	return messages
 }
 
 func sendHealthCheck(_ context.Context, stream v1.NoteAPI_SubscribeToEventsServer) error {

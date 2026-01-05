@@ -75,3 +75,14 @@ message MetricsRequest {
 message SummaryResponse {
   int64 total_view = 1;
 }
+
+message Message {
+  string correlation_id = 1;
+  string content = 2;
+}
+
+message ServerMessage {
+  string correlation_id = 1;
+  string content = 2;
+  bool is_ack = 3;
+}

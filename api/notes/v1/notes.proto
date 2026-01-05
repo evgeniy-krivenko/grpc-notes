@@ -15,4 +15,5 @@ service NoteAPI {
       returns (stream SubscribeToEventResponse);
 
   rpc UploadMetrics(stream MetricsRequest) returns (SummaryResponse);
+  rpc Chat(stream Message) returns (stream ServerMessage);
 }

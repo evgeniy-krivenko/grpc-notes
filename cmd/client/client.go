@@ -6,9 +6,12 @@ import (
 	"io"
 	"log"
 	"log/slog"
+	"math/rand"
 	"os"
 	"time"
 
+	"github.com/google/uuid"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/metadata"
@@ -50,7 +53,11 @@ func run() error {
 
 	// getNote(ctx, c)
 	// subscribeToEvents(ctx, c)
-	if err := sendMetrics(ctx, c); err != nil {
+	// if err := sendMetrics(ctx, c); err != nil {
+	// 	return err
+	// }
+
+	if err := chatWithServer(ctx, c); err != nil {
 		return err
 	}
 
@@ -130,6 +137,75 @@ func sendMetrics(ctx context.Context, client pb.NoteAPIClient) error {
 
 	slogx.Info(ctx, "receive summary from server", slog.Any("summary", reps))
 	return nil
+}
+
+func chatWithServer(ctx context.Context, client pb.NoteAPIClient) error {
+	stream, err := client.Chat(ctx)
+	if err != nil {
+		return fmt.Errorf("chat with server: %v", err)
+	}
+
+	eg, ctx := errgroup.WithContext(stream.Context())
+
+	messages := getMessages()
+
+	eg.Go(func() error {
+		ticker := time.NewTicker(500 * time.Millisecond)
+		defer ticker.Stop()
+		defer stream.CloseSend()
+
+		for {
+			select {
+			case <-ctx.Done():
+				return nil
+			case <-ticker.C:
+			}
+
+			correlationID := uuid.NewString()
+			idx := rand.Intn(10)
+			msg := messages[idx]
+
+			clientMsg := pb.Message{
+				CorrelationId: correlationID,
+				Content:       msg,
+			}
+
+			if err := stream.Send(&clientMsg); err != nil {
+				if err == io.EOF {
+					slogx.Info(ctx, "server closed stream")
+					return nil
+				}
+
+				slogx.Error(ctx, "send msg to server", slogx.Err(err))
+			}
+		}
+	})
+
+	eg.Go(func() error {
+		for {
+			if ctx.Err() != nil {
+				return ctx.Err()
+			}
+
+			msg, err := stream.Recv()
+			if err != nil {
+				if err == io.EOF {
+					slogx.Info(ctx, "server closed stream")
+					return nil
+				}
+
+				slogx.Error(ctx, "receive msg from server", slogx.Err(err))
+			}
+
+			if msg.IsAck {
+				slogx.Info(ctx, "ack message", slog.String("correlation_id", msg.GetCorrelationId()))
+			} else {
+				slogx.Info(ctx, "get message from server", slog.String("msg", msg.Content))
+			}
+		}
+	})
+
+	return eg.Wait()
 }
 
 func NoteError(err error) (*pb.NoteError, bool) {
