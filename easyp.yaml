@@ -42,6 +42,7 @@ lint:
   enum_zero_value_suffix: NONE
 deps:
   - github.com/googleapis/googleapis
+  - github.com/bufbuild/protovalidate@v0.3.1
 
 generate:
   inputs:

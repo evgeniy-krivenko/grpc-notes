@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+option go_package = "github.com/evgeniy-krivenko/grpc-notes/pgk/api/v1";
+
+import "google/type/datetime.proto";
+import "buf/validate/validate.proto";
+
+message CreateNoteRequest {
+  string title = 1 [
+    (buf.validate.field).string.min_len = 5,
+    (buf.validate.field).string.max_len = 30
+  ];
+  string content = 2;
+
+  option (buf.validate.message).cel = {
+    message: "title should not to be eqaul content",
+    expression: "this.title != this.content"
+  };
+}
+
+message CreateNoteResponse {
+  Note note = 1;
+}
+
+message GetNotesRequest {
+  int64 user_id = 1;
+}
+
+message GetNotesResponse {
+  repeated Note notes = 1;
+}
+
+message GetNoteRequest {
+  int64 note_id = 1;
+}
+
+message GetNoteResponse {
+  Note note = 1;
+}
+
+message DeleteNoteRequest {
+  int64 note_id = 1;
+}
+
+message DeleteNoteResponse {}
+
+message Note {
+  int64 id = 1;
+  int64 user_id = 2;
+  string title = 3;
+  string content = 4;
+  google.type.DateTime created_at = 5;
+  google.type.DateTime updated_at = 6;
+}
+
