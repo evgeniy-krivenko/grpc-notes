@@ -91,6 +91,9 @@ func run() error {
 				slogx.LoggingInterceptor,
 				protovalidateic.UnaryServerInterceptor(validator),
 			),
+			grpc.ChainStreamInterceptor(
+				slogx.LoggingStreamInterceptor,
+			),
 			grpc.MaxConcurrentStreams(cfg.GRPC.MaxConcurrentStreams),
 			grpc.KeepaliveParams(keepalive.ServerParameters{
 				Time:    cfg.GRPC.KeepaliveTime,
