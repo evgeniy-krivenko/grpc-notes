@@ -57,3 +57,15 @@ generate:
       opts:
         paths: source_relative
         require_unimplemented_servers: false
+    - name: grpc-gateway
+      out: ./pkg
+      opts:
+        paths: source_relative
+        generate_unbound_methods: true
+    - name: openapiv2
+      out: ./docs
+      opts:
+        logtostderr: true
+        generate_unbound_methods: true
+        allow_repeated_fields_in_body: true
+        include_package_in_tags: true
