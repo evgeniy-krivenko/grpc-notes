@@ -7,9 +7,13 @@ import "api/notes/v1/messages.proto";
 package api.notest.v1;
 
 service NoteAPI {
-  rpc CreateNote(CreateNoteRequest) returns (CreateNoteResponse) {}
-  rpc GetNotes(GetNotesRequest) returns (GetNotesResponse) {}
-  rpc GetNote(GetNoteRequest) returns (GetNoteResponse) {}
-  rpc DeleteNote(DeleteNoteRequest) returns (DeleteNoteResponse) {}
-}
+  rpc CreateNote(CreateNoteRequest) returns (CreateNoteResponse);
+  rpc GetNotes(GetNotesRequest) returns (GetNotesResponse);
+  rpc GetNote(GetNoteRequest) returns (GetNoteResponse);
+  rpc DeleteNote(DeleteNoteRequest) returns (DeleteNoteResponse);
+  rpc SubscribeToEvents(SubscribeToEventRequest)
+      returns (stream SubscribeToEventResponse);
 
+  rpc UploadMetrics(stream MetricsRequest) returns (SummaryResponse);
+  rpc Chat(stream Message) returns (stream ServerMessage);
+}
