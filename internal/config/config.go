@@ -3,9 +3,15 @@ package config
 import "time"
 
 type Config struct {
-	App      AppConfig      `env-prefix:"APP_"`
-	GRPC     GRPCConfig     `env-prefix:"GRPC_"`
-	Database DatabaseConfig `env-prefix:"DB_"`
+	App         AppConfig      `env-prefix:"APP_"`
+	HTTP        HTTPConfig     `env-prefix:"HTTP_"`
+	SwaggerHTTP HTTPConfig     `env-prefix:"SWAGGER_HTTP_"`
+	GRPC        GRPCConfig     `env-prefix:"GRPC_"`
+	Database    DatabaseConfig `env-prefix:"DB_"`
+}
+
+type HTTPConfig struct {
+	Addr string `env:"ADDR" env-default:":8081"`
 }
 
 type AppConfig struct {
